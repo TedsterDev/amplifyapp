@@ -1,71 +1,82 @@
-# Getting Started with Create React App
+# amplifyapp
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React app with Cognito auth, built with Vite. The backend is defined in
+`amplify/` using Amplify Gen 2.
 
-## Available Scripts
+## Prerequisites
 
-In the project directory, you can run:
+- Node.js 20.19+ or 22.12+ (Vite 8 requirement)
+- AWS credentials on your machine, for a profile with permission to deploy
+  CloudFormation stacks
 
-### `npm start`
+## Setup
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+```sh
+npm install
+npm run sandbox
+```
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+`npm run sandbox` provisions a personal cloud backend and writes
+`amplify_outputs.json` at the repo root. That file is gitignored, and
+`src/main.jsx` imports it directly — so **the app does not build until the
+sandbox has run at least once**. Leave the sandbox running while you develop;
+it redeploys on every change under `amplify/`.
+
+To tear the sandbox down and delete its AWS resources:
+
+```sh
+npm run sandbox:delete
+```
+
+The sandbox provisions real AWS resources in your account. A Cognito user pool
+has no fixed monthly charge, but delete the sandbox when you are done with it.
+
+## Available scripts
+
+### `npm run dev`
+
+Runs the app in development mode on [http://localhost:3000](http://localhost:3000).
+Requires `amplify_outputs.json` from a sandbox run.
 
 ### `npm test`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Runs the Vitest suite once and exits. Use `npx vitest` for watch mode. The tests
+render the unwrapped `App` export, so they need neither a backend nor
+`amplify_outputs.json`.
 
 ### `npm run build`
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Builds the app for production into `dist` — minified, with hashed filenames.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### `npm run preview`
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Serves `dist` locally so the production build can be checked before deploying.
 
-### `npm run eject`
+## The backend
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+`amplify/auth/resource.ts` defines Cognito: email as the login attribute,
+email required and auto-verified, MFA off, account recovery by email.
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+`amplify/backend.ts` then reaches through to the underlying CloudFormation
+constructs for three settings `defineAuth` does not expose:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+| Setting | Default | Set to |
+|---|---|---|
+| Password policy | min 8, requires lower, upper, digit and symbol | min 8, no character-class requirements |
+| Refresh token validity | omitted from the template | 30 days |
+| Unauthenticated identities | enabled | disabled |
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## Deploying
 
-## Learn More
+`amplify.yml` drives Amplify Hosting: the backend phase runs
+`ampx pipeline-deploy`, and the frontend phase publishes `dist`.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Connect the repository to a new Amplify app in the AWS console and Hosting
+supplies `$AWS_BRANCH` and `$AWS_APP_ID` to the build automatically.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Learn more
 
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
-# amplifyapp
+- [Amplify Gen 2](https://docs.amplify.aws/react/)
+- [Amplify UI for React](https://ui.docs.amplify.aws/react/connected-components/authenticator)
+- [Vite](https://vite.dev/guide/)
+- [Vitest](https://vitest.dev/guide/)
